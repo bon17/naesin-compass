@@ -1,0 +1,10 @@
+이 폴더의 글꼴은 SIL Open Font License 1.1(OFL)로 배포되는 무료 글꼴입니다.
+OFL 전문: https://openfontlicense.org/open-font-license-official-text/
+
+- Pretendard (PretendardVariable.woff2, v1.3.9)
+  Copyright (c) 2021, Kil Hyung-jin
+  https://github.com/orioncactus/pretendard
+
+- 리디바탕 RIDIBatang (RIDIBatang.woff2)
+  Copyright (c) RIDI Corp.
+  https://ridicorp.com/ridibatang/

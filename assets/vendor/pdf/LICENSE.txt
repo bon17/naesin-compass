@@ -1,0 +1,2 @@
+PDF.js (pdfjs-dist) 3.11.174 — Apache License 2.0 — https://github.com/mozilla/pdf.js
+CMap resources — Copyright Adobe Systems Incorporated, BSD-3-Clause — https://github.com/adobe-type-tools/cmap-resources

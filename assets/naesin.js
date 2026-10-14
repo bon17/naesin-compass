@@ -331,17 +331,21 @@
     };
   }
 
+  // 자치회 임원 학기별 인정 개월. 1학기 3월 1일~8월 17일(5개월 17일), 2학기 8월 18일~2월 말, 시작 후 15일 이상은 한 달.
+  // 3학년은 10월 말까지만 쳐서(지침 Ⅵ-3) 2학기는 8월 18일~10월 31일(2개월 14일) → 2개월
+  const OFFICER_SEM_MONTHS = { '1-1': 6, '1-2': 6, '2-1': 6, '2-2': 6, '3-1': 6, '3-2': 2 };
+
   // 자치회 임원 개월 수. 동일 기간 동안 임원이 중복되면 한 가지만 반영한다(지침 Ⅵ-5)
   // 학기를 아는 기록(학급: sem, 전교: sems)은 학기마다 한 번만 치고, 학기를 모르는 기록(엑셀·태블릿 자료)은 그대로 더한다
   function officerMonthsOf(officers) {
-    const bySem = {};
+    const sems = {};
     let rest = 0;
     (officers || []).forEach((o) => {
-      const sems = o.sems || (o.sem ? [o.sem] : []);
-      if (!sems.length) { rest += o.months; return; }
-      sems.forEach((s) => { bySem[s] = Math.max(bySem[s] || 0, o.months / sems.length); });
+      const list = o.sems || (o.sem ? [o.sem] : []);
+      if (!list.length) rest += o.months;
+      list.forEach((s) => { sems[s] = true; });
     });
-    return Object.keys(bySem).reduce((a, s) => a + bySem[s], rest);
+    return Object.keys(sems).reduce((a, s) => a + (OFFICER_SEM_MONTHS[s] || 0), rest);
   }
 
   root.Naesin = {

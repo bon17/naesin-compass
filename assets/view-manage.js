@@ -280,7 +280,7 @@
   function officerWhenOptions(role) {
     if (!role) return '<option value="" selected disabled>학기·학년</option>';
     if (root.UI.isSchoolOfficer(role)) {
-      return `<option value="" selected disabled>학년</option>${root.UI.OFFICER_YEARS.map(([v, name, sems]) => `<option value="${v}">${name} · ${sems.length * 6}개월</option>`).join('')}`;
+      return `<option value="" selected disabled>학년</option>${root.UI.OFFICER_YEARS.map(([v, name, sems]) => `<option value="${v}">${name} · ${N.officerMonths([{ sems }])}개월</option>`).join('')}`;
     }
     return `<option value="" selected disabled>학기</option>${root.UI.OFFICER_SEMS.map(([v, name]) => `<option value="${v}">${name}</option>`).join('')}`;
   }
@@ -303,14 +303,14 @@
             <button type="button" class="btn-text" data-officer-del="${esc(o.id)}" aria-label="${esc(label)} 삭제">삭제</button></li>`;
         }).join('')}</ul>`
           : '<p class="desc">아직 넣은 기록이 없어요.</p>'}
-        ${anyOverlap ? `<p class="desc">같은 기간에 임원을 둘 맡으면 한 가지만 반영해요. 겹친 기간은 한 번만 쳐서 모두 <strong>${total}개월 ${fmt(total * 0.1, 1)}점</strong>이에요.</p>` : ''}
+        ${anyOverlap || total * 0.1 > 2 ? `<p class="desc">${anyOverlap ? '같은 기간에 임원을 둘 맡으면 한 가지만 반영해요. 겹친 기간은 한 번만 쳐서 ' : '임원 '}모두 <strong>${total}개월 ${fmt(total * 0.1, 1)}점</strong>이에요.${total * 0.1 > 2 ? ' 가산은 수상과 합쳐 2점까지라 학교활동은 10점 만점이에요.' : ''}</p>` : ''}
         <div class="officer-form">
           <select class="select" data-officer-role aria-label="임원 역할"><option value="" selected disabled>임원</option>${root.UI.OFFICER_ROLES.map((role) => `<option>${role}</option>`).join('')}</select>
           <select class="select" data-officer-when aria-label="학기·학년" disabled>${officerWhenOptions('')}</select>
           <button type="button" class="btn btn-quiet" data-officer-add>추가</button>
         </div>
         <p class="field-error" data-officer-error hidden></p>
-        <p class="desc">학급 임원은 학기(6개월·0.6점), 전교 임원은 학년(2학년 12개월·1.2점, 3학년은 1학기 6개월)으로 넣어요. 학급 임원과 전교 임원을 같은 때 했으면 둘 다 넣으세요. 겹친 기간은 한 번만 쳐요.</p>
+        <p class="desc">학급 임원은 학기(6개월·0.6점), 전교 임원은 학년(2학년 12개월·1.2점, 3학년은 10월 말까지 8개월·0.8점)으로 넣어요. 학급 임원과 전교 임원을 같은 때 했으면 둘 다 넣으세요. 겹친 기간은 한 번만 쳐요.</p>
       </div>`;
   }
 
@@ -881,7 +881,7 @@
           if (role && when) {
             if (school) {
               const sems = root.UI.OFFICER_YEARS.find(([v]) => v === when)[2];
-              rec = { role, grade: when, sems, months: sems.length * 6 };
+              rec = { role, grade: when, sems, months: N.officerMonths([{ sems }]) };
             } else {
               rec = { role, sem: when, months: root.UI.OFFICER_SEMS.find(([v]) => v === when)[2] };
             }

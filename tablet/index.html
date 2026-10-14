@@ -11005,7 +11005,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
       const counts = {};
       (s.awards || []).forEach((a) => { counts[a.sem] = (counts[a.sem] || 0) + 1; });
       const awards = Object.keys(counts).filter((sem) => SEM_CODES[sem]).sort().map((sem) => `${SEM_CODES[sem]}${counts[sem]}`).join('');
-      const months = (s.officers || []).reduce((a, o) => a + o.months, 0);
+      const months = root.Naesin.officerMonths(s.officers);
       return [s.no, s.name, grades, att, awards, months];
     });
     if (subj.length > 36) throw new Error('과목이 너무 많아요');
@@ -11264,7 +11264,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     // 학교활동: 기본 8점 + 수상(학기당 1개, 0.5점) + 자치회 임원(월 0.1점), 가산 합계 2점 이내
     const awardSemesters = Array.from(new Set(student.awards.map((a) => a.sem))).sort();
     const plannedAwards = Array.from(new Set(planned)).filter((s) => awardSemesters.indexOf(s) < 0).sort();
-    const officerMonths = student.officers.reduce((a, o) => a + o.months, 0);
+    const officerMonths = officerMonthsOf(student.officers);
     const activityExtra = Math.min(2, (awardSemesters.length + plannedAwards.length) * 0.5 + officerMonths * 0.1);
     const activityScore = round3(8 + activityExtra);
 
@@ -11411,6 +11411,19 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     };
   }
 
+  // 자치회 임원 개월 수. 동일 기간 동안 임원이 중복되면 한 가지만 반영한다(지침 Ⅵ-5)
+  // 학기를 아는 기록(학급: sem, 전교: sems)은 학기마다 한 번만 치고, 학기를 모르는 기록(엑셀·태블릿 자료)은 그대로 더한다
+  function officerMonthsOf(officers) {
+    const bySem = {};
+    let rest = 0;
+    (officers || []).forEach((o) => {
+      const sems = o.sems || (o.sem ? [o.sem] : []);
+      if (!sems.length) { rest += o.months; return; }
+      sems.forEach((s) => { bySem[s] = Math.max(bySem[s] || 0, o.months / sems.length); });
+    });
+    return Object.keys(bySem).reduce((a, s) => a + bySem[s], rest);
+  }
+
   root.Naesin = {
     RULES,
     SEMESTERS,
@@ -11428,6 +11441,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     subjectBaseline,
     absenceDays,
     volunteerScore,
+    officerMonths: officerMonthsOf,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -11441,7 +11455,8 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   'use strict';
 
   const KEY = 'naesin-compass:v1';
-  // officers: 담임이 손으로 넣는 자치회 임원 기록 { 학생번호: [{ id, sem, role, months }] } (예전 기록은 sem 없음) — 나이스 파일을 다시 올려도 남는다
+  // officers: 담임이 손으로 넣는 자치회 임원 기록 { 학생번호: [학급 { id, role, sem, months } · 전교 { id, role, grade, sems, months }] }
+  //           (예전 기록은 sem 없음) — 나이스 파일을 다시 올려도 남는다
   // sentAt·sentSig: 마지막으로 태블릿 QR을 만든 때와 그때 자료의 지문(자료가 바뀌면 다시 보내라고 알린다)
   // edits: 담임이 앱에서 고친 나이스 값 { 학생번호: { grades: { '학기|과목': { ach, raw } }, attendance: { 학년: {…} }, awards: { 학기: 개수 } } }
   //        엑셀을 다시 올려도 남고, 칸마다 '원래대로'로 지운다
@@ -11572,6 +11587,12 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   // 1학기 3월 1일~8월 17일(5개월 17일), 2학기 8월 18일~2월 말은 15일 이상을 한 달로 쳐 6개월.
   // 3학년 2학기는 넣지 않는다(담임 결정)
   const OFFICER_SEMS = ['1-1', '1-2', '2-1', '2-2', '3-1'].map((s) => [s, `${s[0]}학년 ${s[2]}학기`, 6]);
+  // 학급 임원은 학기, 전교 임원은 학년 단위로 넣는다
+  const isSchoolOfficer = (role) => String(role || '').indexOf('전교') === 0;
+  // 전교 임원의 학년: [값, 화면 이름, 들어가는 학기]. 1학년은 전교 임원이 없다(담임 결정). 3학년은 2학기를 넣지 않아 1학기 6개월만
+  const OFFICER_YEARS = ['2', '3'].map((g) => [g, `${g}학년`, OFFICER_SEMS.map(([v]) => v).filter((v) => v[0] === g)]);
+  // 임원 기록이 차지하는 학기
+  const officerSems = (o) => o.sems || (o.sem ? [o.sem] : []);
 
   // ---------- 학교별 커트라인(최근 4개 학년도) ----------
 
@@ -11648,7 +11669,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
     return `<button type="button" class="btn btn-quiet btn-guide" id="${id}"><span class="guide-i" aria-hidden="true">i</span>사용 안내</button>`;
   }
 
-  root.UI = { esc, fmt, signed, maskName, formatTime, computeAll, computeOne, editCount, validCutoffs, cutYears, cutLatestYear, cutYearTexts, cutNumber, isCutNote, defaultLatestYear, counselUrl, brandMark, guideButton, BASIS, OFFICER_ROLES, OFFICER_SEMS };
+  root.UI = { esc, fmt, signed, maskName, formatTime, computeAll, computeOne, editCount, validCutoffs, cutYears, cutLatestYear, cutYearTexts, cutNumber, isCutNote, defaultLatestYear, counselUrl, brandMark, guideButton, BASIS, OFFICER_ROLES, OFFICER_SEMS, OFFICER_YEARS, isSchoolOfficer, officerSems };
 })(window);
 
 </script>
@@ -12295,7 +12316,7 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
           <p>기본 8점에 더해 받아요. 더하는 점수는 <strong>합쳐서 2점까지</strong>예요(3학년 10월 말까지).</p>
           <ul class="plain-list">
             <li><strong>교내 수상</strong>: 학기마다 1개만 0.5점. 한 학기에 여러 개를 받아도 0.5점이에요.</li>
-            <li><strong>자치회 임원</strong>: 한 달에 0.1점. 전교·학년·학급 회장과 부회장, 15일 이상이면 한 달로 쳐요.</li>
+            <li><strong>자치회 임원</strong>: 한 달에 0.1점. 전교·학년·학급 회장과 부회장, 15일 이상이면 한 달로 쳐요. 같은 기간에 둘을 맡았으면 한 가지만 쳐요.</li>
           </ul>
           <p class="rule-mine"><span>이 학생</span> ${act ? `수상 ${act.awardSemesters.length}개 학기${act.plannedAwards.length ? ` + 받을 예정 ${act.plannedAwards.length}개 학기` : ''} · 임원 ${act.officerMonths}개월 → 가산 ${fmt(act.extra, 1)}점 → <strong>${fmt(act.score, 1)}점</strong>` : '—'}</p>
         </section>

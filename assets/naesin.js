@@ -184,7 +184,7 @@
     // 학교활동: 기본 8점 + 수상(학기당 1개, 0.5점) + 자치회 임원(월 0.1점), 가산 합계 2점 이내
     const awardSemesters = Array.from(new Set(student.awards.map((a) => a.sem))).sort();
     const plannedAwards = Array.from(new Set(planned)).filter((s) => awardSemesters.indexOf(s) < 0).sort();
-    const officerMonths = student.officers.reduce((a, o) => a + o.months, 0);
+    const officerMonths = officerMonthsOf(student.officers);
     const activityExtra = Math.min(2, (awardSemesters.length + plannedAwards.length) * 0.5 + officerMonths * 0.1);
     const activityScore = round3(8 + activityExtra);
 
@@ -331,6 +331,19 @@
     };
   }
 
+  // 자치회 임원 개월 수. 동일 기간 동안 임원이 중복되면 한 가지만 반영한다(지침 Ⅵ-5)
+  // 학기를 아는 기록(학급: sem, 전교: sems)은 학기마다 한 번만 치고, 학기를 모르는 기록(엑셀·태블릿 자료)은 그대로 더한다
+  function officerMonthsOf(officers) {
+    const bySem = {};
+    let rest = 0;
+    (officers || []).forEach((o) => {
+      const sems = o.sems || (o.sem ? [o.sem] : []);
+      if (!sems.length) { rest += o.months; return; }
+      sems.forEach((s) => { bySem[s] = Math.max(bySem[s] || 0, o.months / sems.length); });
+    });
+    return Object.keys(bySem).reduce((a, s) => a + bySem[s], rest);
+  }
+
   root.Naesin = {
     RULES,
     SEMESTERS,
@@ -348,5 +361,6 @@
     subjectBaseline,
     absenceDays,
     volunteerScore,
+    officerMonths: officerMonthsOf,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

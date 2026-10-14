@@ -423,7 +423,7 @@
           <p>기본 8점에 더해 받아요. 더하는 점수는 <strong>합쳐서 2점까지</strong>예요(3학년 10월 말까지).</p>
           <ul class="plain-list">
             <li><strong>교내 수상</strong>: 학기마다 1개만 0.5점. 한 학기에 여러 개를 받아도 0.5점이에요.</li>
-            <li><strong>자치회 임원</strong>: 한 달에 0.1점. 전교·학년·학급 회장과 부회장, 15일 이상이면 한 달로 쳐요.</li>
+            <li><strong>자치회 임원</strong>: 한 달에 0.1점. 전교·학년·학급 회장과 부회장, 15일 이상이면 한 달로 쳐요. 같은 기간에 둘을 맡았으면 한 가지만 쳐요.</li>
           </ul>
           <p class="rule-mine"><span>이 학생</span> ${act ? `수상 ${act.awardSemesters.length}개 학기${act.plannedAwards.length ? ` + 받을 예정 ${act.plannedAwards.length}개 학기` : ''} · 임원 ${act.officerMonths}개월 → 가산 ${fmt(act.extra, 1)}점 → <strong>${fmt(act.score, 1)}점</strong>` : '—'}</p>
         </section>

@@ -271,27 +271,46 @@
       </tr>`;
   }
 
-  // 자치회 임원은 나이스 출력물에 없어 담임이 직접 넣는다(월 0.1점, 기간이 겹치면 하나만)
+  // 자치회 임원은 나이스 출력물에 없어 담임이 직접 넣는다(월 0.1점). 학급 임원은 학기, 전교 임원은 학년 단위
+  // 같은 기간에 임원이 둘이면 한 가지만 반영한다 — 학급·전교를 둘 다 넣어 두고, 겹친 기록에 표시한다
+  const officerPeriod = (o) => (o.grade ? `${o.grade}학년`
+    : o.sem ? ((root.UI.OFFICER_SEMS.find(([v]) => v === o.sem) || [])[1] || '') : '');
+
+  // 역할을 고른 뒤의 두 번째 칸: 학급 임원은 학기, 전교 임원은 학년
+  function officerWhenOptions(role) {
+    if (!role) return '<option value="" selected disabled>학기·학년</option>';
+    if (root.UI.isSchoolOfficer(role)) {
+      return `<option value="" selected disabled>학년</option>${root.UI.OFFICER_YEARS.map(([v, name, sems]) => `<option value="${v}">${name} · ${sems.length * 6}개월</option>`).join('')}`;
+    }
+    return `<option value="" selected disabled>학기</option>${root.UI.OFFICER_SEMS.map(([v, name]) => `<option value="${v}">${name}</option>`).join('')}`;
+  }
+
   function officerBox(st) {
-    const semName = (sem) => ((root.UI.OFFICER_SEMS.find(([v]) => v === sem) || [])[1] || '');
-    const list = (st.officers || []).slice().sort((a, b) => String(a.sem || '').localeCompare(String(b.sem || '')));
+    const first = (o) => String(root.UI.officerSems(o)[0] || '');
+    // 학기 순, 같은 때 시작하면 전교 임원 먼저
+    const list = (st.officers || []).slice().sort((a, b) => first(a).localeCompare(first(b)) || (b.grade ? 1 : 0) - (a.grade ? 1 : 0));
+    const overlaps = (o) => list.some((x) => x !== o && root.UI.officerSems(x).some((sem) => root.UI.officerSems(o).indexOf(sem) >= 0));
+    const anyOverlap = list.some(overlaps);
+    const total = N.officerMonths(list);
     return `
       <div class="officer-box" data-student="${esc(st.id)}">
         <p class="officer-title">자치회 임원 <span class="desc">담임 입력 · 1개월에 0.1점</span></p>
         ${list.length ? `<ul class="officer-list">${list.map((o) => {
-          const label = `${o.sem ? `${semName(o.sem)} ` : ''}${o.role} · ${o.months}개월 ${fmt(o.months * 0.1, 1)}점`;
+          const period = officerPeriod(o);
+          const label = `${period ? `${period} ` : ''}${o.role} · ${o.months}개월${overlaps(o) ? '' : ` ${fmt(o.months * 0.1, 1)}점`}`;
           return `
-          <li><span>${esc(label)}</span>
+          <li><span>${esc(label)}${overlaps(o) ? ' <span class="tag tag-soft">기간 겹침</span>' : ''}</span>
             <button type="button" class="btn-text" data-officer-del="${esc(o.id)}" aria-label="${esc(label)} 삭제">삭제</button></li>`;
         }).join('')}</ul>`
           : '<p class="desc">아직 넣은 기록이 없어요.</p>'}
+        ${anyOverlap ? `<p class="desc">같은 기간에 임원을 둘 맡으면 한 가지만 반영해요. 겹친 기간은 한 번만 쳐서 모두 <strong>${total}개월 ${fmt(total * 0.1, 1)}점</strong>이에요.</p>` : ''}
         <div class="officer-form">
-          <select class="select" data-officer-sem aria-label="학기"><option value="" selected disabled>학기</option>${root.UI.OFFICER_SEMS.map(([v, name]) => `<option value="${v}">${name}</option>`).join('')}</select>
-          <select class="select" data-officer-role aria-label="임원 역할">${root.UI.OFFICER_ROLES.map((role) => `<option>${role}</option>`).join('')}</select>
+          <select class="select" data-officer-role aria-label="임원 역할"><option value="" selected disabled>임원</option>${root.UI.OFFICER_ROLES.map((role) => `<option>${role}</option>`).join('')}</select>
+          <select class="select" data-officer-when aria-label="학기·학년" disabled>${officerWhenOptions('')}</select>
           <button type="button" class="btn btn-quiet" data-officer-add>추가</button>
         </div>
         <p class="field-error" data-officer-error hidden></p>
-        <p class="desc">학기를 고르면 6개월(0.6점)로 넣어요. 한 학기에 임원을 둘 맡았어도 한 번만 넣어요.</p>
+        <p class="desc">학급 임원은 학기(6개월·0.6점), 전교 임원은 학년(2학년 12개월·1.2점, 3학년은 1학기 6개월)으로 넣어요. 학급 임원과 전교 임원을 같은 때 했으면 둘 다 넣으세요. 겹친 기간은 한 번만 쳐요.</p>
       </div>`;
   }
 
@@ -822,6 +841,16 @@
     results.addEventListener('change', (e) => {
       const el = e.target.closest('[data-edit]');
       if (el) setTimeout(() => commitEdit(el), 0);
+      // 임원 역할을 고르면 두 번째 칸을 학기(학급) 또는 학년(전교)으로 바꾼다
+      const roleSel = e.target.closest('[data-officer-role]');
+      if (roleSel) {
+        const box = roleSel.closest('.officer-box');
+        const when = box.querySelector('[data-officer-when]');
+        when.innerHTML = officerWhenOptions(roleSel.value);
+        when.disabled = false;
+        when.setAttribute('aria-label', root.UI.isSchoolOfficer(roleSel.value) ? '학년' : '학기');
+        box.querySelector('[data-officer-error]').hidden = true;
+      }
     });
     results.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && e.target.matches('input[data-edit]')) { e.preventDefault(); e.target.blur(); e.target.focus(); }
@@ -845,18 +874,31 @@
       if (box) {
         const sid = box.dataset.student;
         if (e.target.closest('[data-officer-add]')) {
-          const sem = box.querySelector('[data-officer-sem]').value;
-          const months = ((root.UI.OFFICER_SEMS.find(([v]) => v === sem) || [])[2]) || 0;
-          const taken = ((Store.get().officers || {})[sid] || []).some((o) => o.sem === sem);
-          const err = !sem ? '학기를 골라 주세요.' : taken ? '이 학기는 이미 넣었어요. 한 학기에는 한 번만 인정돼요.' : '';
+          const role = box.querySelector('[data-officer-role]').value;
+          const when = box.querySelector('[data-officer-when]').value;
+          const school = root.UI.isSchoolOfficer(role);
+          let rec = null;
+          if (role && when) {
+            if (school) {
+              const sems = root.UI.OFFICER_YEARS.find(([v]) => v === when)[2];
+              rec = { role, grade: when, sems, months: sems.length * 6 };
+            } else {
+              rec = { role, sem: when, months: root.UI.OFFICER_SEMS.find(([v]) => v === when)[2] };
+            }
+          }
+          // 학급끼리·전교끼리 기간이 겹치면 막는다. 학급과 전교가 겹치는 것은 넣고 계산에서 한 번만 친다
+          const clash = rec && ((Store.get().officers || {})[sid] || []).find((o) => root.UI.isSchoolOfficer(o.role) === school
+            && root.UI.officerSems(o).some((sem) => root.UI.officerSems(rec).indexOf(sem) >= 0));
+          const err = !role ? '임원을 골라 주세요.'
+            : !when ? `${school ? '학년을' : '학기를'} 골라 주세요.`
+              : clash ? `${officerPeriod(clash)} ${clash.role}을 이미 넣었어요. 같은 기간에는 한 가지만 반영돼요.` : '';
           const errEl = box.querySelector('[data-officer-error]');
           errEl.textContent = err;
           errEl.hidden = !err;
           if (err) return;
-          const role = box.querySelector('[data-officer-role]').value;
           Store.update((s) => {
             const officers = Object.assign({}, s.officers);
-            officers[sid] = (officers[sid] || []).concat([{ id: `o${Date.now().toString(36)}`, sem, role, months }]);
+            officers[sid] = (officers[sid] || []).concat([Object.assign({ id: `o${Date.now().toString(36)}` }, rec)]);
             return { officers };
           });
         }

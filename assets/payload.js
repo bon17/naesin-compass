@@ -35,7 +35,7 @@
       const counts = {};
       (s.awards || []).forEach((a) => { counts[a.sem] = (counts[a.sem] || 0) + 1; });
       const awards = Object.keys(counts).filter((sem) => SEM_CODES[sem]).sort().map((sem) => `${SEM_CODES[sem]}${counts[sem]}`).join('');
-      const months = (s.officers || []).reduce((a, o) => a + o.months, 0);
+      const months = root.Naesin.officerMonths(s.officers);
       return [s.no, s.name, grades, att, awards, months];
     });
     if (subj.length > 36) throw new Error('과목이 너무 많아요');

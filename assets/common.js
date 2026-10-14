@@ -6,7 +6,8 @@
   'use strict';
 
   const KEY = 'naesin-compass:v1';
-  // officers: 담임이 손으로 넣는 자치회 임원 기록 { 학생번호: [{ id, sem, role, months }] } (예전 기록은 sem 없음) — 나이스 파일을 다시 올려도 남는다
+  // officers: 담임이 손으로 넣는 자치회 임원 기록 { 학생번호: [학급 { id, role, sem, months } · 전교 { id, role, grade, sems, months }] }
+  //           (예전 기록은 sem 없음) — 나이스 파일을 다시 올려도 남는다
   // sentAt·sentSig: 마지막으로 태블릿 QR을 만든 때와 그때 자료의 지문(자료가 바뀌면 다시 보내라고 알린다)
   // edits: 담임이 앱에서 고친 나이스 값 { 학생번호: { grades: { '학기|과목': { ach, raw } }, attendance: { 학년: {…} }, awards: { 학기: 개수 } } }
   //        엑셀을 다시 올려도 남고, 칸마다 '원래대로'로 지운다
@@ -137,6 +138,12 @@
   // 1학기 3월 1일~8월 17일(5개월 17일), 2학기 8월 18일~2월 말은 15일 이상을 한 달로 쳐 6개월.
   // 3학년 2학기는 넣지 않는다(담임 결정)
   const OFFICER_SEMS = ['1-1', '1-2', '2-1', '2-2', '3-1'].map((s) => [s, `${s[0]}학년 ${s[2]}학기`, 6]);
+  // 학급 임원은 학기, 전교 임원은 학년 단위로 넣는다
+  const isSchoolOfficer = (role) => String(role || '').indexOf('전교') === 0;
+  // 전교 임원의 학년: [값, 화면 이름, 들어가는 학기]. 1학년은 전교 임원이 없다(담임 결정). 3학년은 2학기를 넣지 않아 1학기 6개월만
+  const OFFICER_YEARS = ['2', '3'].map((g) => [g, `${g}학년`, OFFICER_SEMS.map(([v]) => v).filter((v) => v[0] === g)]);
+  // 임원 기록이 차지하는 학기
+  const officerSems = (o) => o.sems || (o.sem ? [o.sem] : []);
 
   // ---------- 학교별 커트라인(최근 4개 학년도) ----------
 
@@ -213,5 +220,5 @@
     return `<button type="button" class="btn btn-quiet btn-guide" id="${id}"><span class="guide-i" aria-hidden="true">i</span>사용 안내</button>`;
   }
 
-  root.UI = { esc, fmt, signed, maskName, formatTime, computeAll, computeOne, editCount, validCutoffs, cutYears, cutLatestYear, cutYearTexts, cutNumber, isCutNote, defaultLatestYear, counselUrl, brandMark, guideButton, BASIS, OFFICER_ROLES, OFFICER_SEMS };
+  root.UI = { esc, fmt, signed, maskName, formatTime, computeAll, computeOne, editCount, validCutoffs, cutYears, cutLatestYear, cutYearTexts, cutNumber, isCutNote, defaultLatestYear, counselUrl, brandMark, guideButton, BASIS, OFFICER_ROLES, OFFICER_SEMS, OFFICER_YEARS, isSchoolOfficer, officerSems };
 })(window);

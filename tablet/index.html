@@ -383,6 +383,7 @@ button, input, select { font: inherit; color: inherit; }
 .officer-list li { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
 .officer-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0 4px; }
 .officer-form .select { min-height: 44px; padding: 0 8px; font-size: 15px; }
+.officer-form [data-officer-add] { grid-column: 2; }
 
 /* 나이스 자료 고치기(학생 상세 아래) */
 .fix { margin-top: 24px; border: 1px solid var(--line-strong); border-radius: var(--r-lg); background: var(--bg); }
@@ -11567,8 +11568,10 @@ function findAlignmentPattern(matrix, alignmentPatternQuads, topRight, topLeft, 
   }
 
   const OFFICER_ROLES = ['학급 회장', '학급 부회장', '전교 회장', '전교 부회장'];
-  // 임원 기록의 학기: [값, 화면 이름]
-  const OFFICER_SEMS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2'].map((s) => [s, `${s[0]}학년 ${s[2]}학기`]);
+  // 임원 기록의 학기: [값, 화면 이름, 인정 개월]
+  // 1학기 3월 1일~8월 17일(5개월 17일), 2학기 8월 18일~2월 말은 15일 이상을 한 달로 쳐 6개월.
+  // 3학년 2학기는 넣지 않는다(담임 결정)
+  const OFFICER_SEMS = ['1-1', '1-2', '2-1', '2-2', '3-1'].map((s) => [s, `${s[0]}학년 ${s[2]}학기`, 6]);
 
   // ---------- 학교별 커트라인(최근 4개 학년도) ----------
 

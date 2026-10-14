@@ -279,7 +279,7 @@
       <div class="officer-box" data-student="${esc(st.id)}">
         <p class="officer-title">자치회 임원 <span class="desc">담임 입력 · 1개월에 0.1점</span></p>
         ${list.length ? `<ul class="officer-list">${list.map((o) => {
-          const label = `${o.sem ? `${semName(o.sem)} ` : ''}${o.role} ${o.months}개월`;
+          const label = `${o.sem ? `${semName(o.sem)} ` : ''}${o.role} · ${o.months}개월 ${fmt(o.months * 0.1, 1)}점`;
           return `
           <li><span>${esc(label)}</span>
             <button type="button" class="btn-text" data-officer-del="${esc(o.id)}" aria-label="${esc(label)} 삭제">삭제</button></li>`;
@@ -288,11 +288,10 @@
         <div class="officer-form">
           <select class="select" data-officer-sem aria-label="학기"><option value="" selected disabled>학기</option>${root.UI.OFFICER_SEMS.map(([v, name]) => `<option value="${v}">${name}</option>`).join('')}</select>
           <select class="select" data-officer-role aria-label="임원 역할">${root.UI.OFFICER_ROLES.map((role) => `<option>${role}</option>`).join('')}</select>
-          <input class="input num" data-officer-months type="number" min="1" max="6" step="1" inputmode="numeric" placeholder="개월" aria-label="활동 개월 수">
           <button type="button" class="btn btn-quiet" data-officer-add>추가</button>
         </div>
         <p class="field-error" data-officer-error hidden></p>
-        <p class="desc">학기마다 한 줄씩 넣어요. 남은 날이 15일 이상이면 1개월로 세요(예: 3월 1일~8월 17일은 5개월 17일 → 6개월, 0.6점). 3학년은 10월까지만 세고, 같은 기간에 임원을 둘 맡았으면 하나만 넣어 주세요.</p>
+        <p class="desc">학기를 고르면 6개월(0.6점)로 넣어요. 한 학기에 임원을 둘 맡았어도 한 번만 넣어요.</p>
       </div>`;
   }
 
@@ -847,9 +846,9 @@
         const sid = box.dataset.student;
         if (e.target.closest('[data-officer-add]')) {
           const sem = box.querySelector('[data-officer-sem]').value;
-          const months = Number(box.querySelector('[data-officer-months]').value);
-          const err = !sem ? '학기를 골라 주세요.'
-            : !(Number.isInteger(months) && months >= 1 && months <= 6) ? '한 학기는 1~6개월로 적어 주세요. 15일 이상이면 1개월로 셉니다.' : '';
+          const months = ((root.UI.OFFICER_SEMS.find(([v]) => v === sem) || [])[2]) || 0;
+          const taken = ((Store.get().officers || {})[sid] || []).some((o) => o.sem === sem);
+          const err = !sem ? '학기를 골라 주세요.' : taken ? '이 학기는 이미 넣었어요. 한 학기에는 한 번만 인정돼요.' : '';
           const errEl = box.querySelector('[data-officer-error]');
           errEl.textContent = err;
           errEl.hidden = !err;

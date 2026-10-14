@@ -374,6 +374,7 @@ button, input, select { font: inherit; color: inherit; }
 .officer-list li { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); }
 .officer-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0 4px; }
 .officer-form .select { min-height: 44px; padding: 0 8px; font-size: 15px; }
+.officer-form [data-officer-add] { grid-column: 2; }
 
 /* 나이스 자료 고치기(학생 상세 아래) */
 .fix { margin-top: 24px; border: 1px solid var(--line-strong); border-radius: var(--r-lg); background: var(--bg); }

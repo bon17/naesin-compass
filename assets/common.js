@@ -6,7 +6,7 @@
   'use strict';
 
   const KEY = 'naesin-compass:v1';
-  // officers: 담임이 손으로 넣는 자치회 임원 기록 { 학생번호: [{ id, role, months }] } — 나이스 파일을 다시 올려도 남는다
+  // officers: 담임이 손으로 넣는 자치회 임원 기록 { 학생번호: [{ id, sem, role, months }] } (예전 기록은 sem 없음) — 나이스 파일을 다시 올려도 남는다
   // sentAt·sentSig: 마지막으로 태블릿 QR을 만든 때와 그때 자료의 지문(자료가 바뀌면 다시 보내라고 알린다)
   // edits: 담임이 앱에서 고친 나이스 값 { 학생번호: { grades: { '학기|과목': { ach, raw } }, attendance: { 학년: {…} }, awards: { 학기: 개수 } } }
   //        엑셀을 다시 올려도 남고, 칸마다 '원래대로'로 지운다
@@ -132,7 +132,9 @@
     return state.dataset.students.map((s) => ({ student: withManual(state, s), result: computeOne(state, s, opts) }));
   }
 
-  const OFFICER_ROLES = ['학급 회장', '학급 부회장', '학년 회장', '학년 부회장', '전교 회장', '전교 부회장'];
+  const OFFICER_ROLES = ['학급 회장', '학급 부회장', '전교 회장', '전교 부회장'];
+  // 임원 기록의 학기: [값, 화면 이름]
+  const OFFICER_SEMS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2'].map((s) => [s, `${s[0]}학년 ${s[2]}학기`]);
 
   // ---------- 학교별 커트라인(최근 4개 학년도) ----------
 
@@ -209,5 +211,5 @@
     return `<button type="button" class="btn btn-quiet btn-guide" id="${id}"><span class="guide-i" aria-hidden="true">i</span>사용 안내</button>`;
   }
 
-  root.UI = { esc, fmt, signed, maskName, formatTime, computeAll, computeOne, editCount, validCutoffs, cutYears, cutLatestYear, cutYearTexts, cutNumber, isCutNote, defaultLatestYear, counselUrl, brandMark, guideButton, BASIS, OFFICER_ROLES };
+  root.UI = { esc, fmt, signed, maskName, formatTime, computeAll, computeOne, editCount, validCutoffs, cutYears, cutLatestYear, cutYearTexts, cutNumber, isCutNote, defaultLatestYear, counselUrl, brandMark, guideButton, BASIS, OFFICER_ROLES, OFFICER_SEMS };
 })(window);

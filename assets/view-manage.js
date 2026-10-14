@@ -273,21 +273,26 @@
 
   // 자치회 임원은 나이스 출력물에 없어 담임이 직접 넣는다(월 0.1점, 기간이 겹치면 하나만)
   function officerBox(st) {
-    const list = st.officers || [];
+    const semName = (sem) => ((root.UI.OFFICER_SEMS.find(([v]) => v === sem) || [])[1] || '');
+    const list = (st.officers || []).slice().sort((a, b) => String(a.sem || '').localeCompare(String(b.sem || '')));
     return `
       <div class="officer-box" data-student="${esc(st.id)}">
         <p class="officer-title">자치회 임원 <span class="desc">담임 입력 · 1개월에 0.1점</span></p>
-        ${list.length ? `<ul class="officer-list">${list.map((o) => `
-          <li><span>${esc(o.role)} ${o.months}개월</span>
-            <button type="button" class="btn-text" data-officer-del="${esc(o.id)}" aria-label="${esc(o.role)} ${o.months}개월 삭제">삭제</button></li>`).join('')}</ul>`
+        ${list.length ? `<ul class="officer-list">${list.map((o) => {
+          const label = `${o.sem ? `${semName(o.sem)} ` : ''}${o.role} ${o.months}개월`;
+          return `
+          <li><span>${esc(label)}</span>
+            <button type="button" class="btn-text" data-officer-del="${esc(o.id)}" aria-label="${esc(label)} 삭제">삭제</button></li>`;
+        }).join('')}</ul>`
           : '<p class="desc">아직 넣은 기록이 없어요.</p>'}
         <div class="officer-form">
+          <select class="select" data-officer-sem aria-label="학기"><option value="" selected disabled>학기</option>${root.UI.OFFICER_SEMS.map(([v, name]) => `<option value="${v}">${name}</option>`).join('')}</select>
           <select class="select" data-officer-role aria-label="임원 역할">${root.UI.OFFICER_ROLES.map((role) => `<option>${role}</option>`).join('')}</select>
-          <input class="input num" data-officer-months type="number" min="1" max="24" step="1" inputmode="numeric" placeholder="개월" aria-label="활동 개월 수">
+          <input class="input num" data-officer-months type="number" min="1" max="6" step="1" inputmode="numeric" placeholder="개월" aria-label="활동 개월 수">
           <button type="button" class="btn btn-quiet" data-officer-add>추가</button>
         </div>
-        <p class="field-error" data-officer-error hidden>1~24 사이 개월 수를 숫자로 적어 주세요. 15일 이상이면 1개월로 셉니다.</p>
-        <p class="desc">같은 기간에 임원을 둘 맡았으면 하나만 넣어 주세요.</p>
+        <p class="field-error" data-officer-error hidden></p>
+        <p class="desc">학기마다 한 줄씩 넣어요. 남은 날이 15일 이상이면 1개월로 세요(예: 3월 1일~8월 17일은 5개월 17일 → 6개월, 0.6점). 3학년은 10월까지만 세고, 같은 기간에 임원을 둘 맡았으면 하나만 넣어 주세요.</p>
       </div>`;
   }
 
@@ -841,14 +846,18 @@
       if (box) {
         const sid = box.dataset.student;
         if (e.target.closest('[data-officer-add]')) {
+          const sem = box.querySelector('[data-officer-sem]').value;
           const months = Number(box.querySelector('[data-officer-months]').value);
-          const ok = Number.isInteger(months) && months >= 1 && months <= 24;
-          box.querySelector('[data-officer-error]').hidden = ok;
-          if (!ok) return;
+          const err = !sem ? '학기를 골라 주세요.'
+            : !(Number.isInteger(months) && months >= 1 && months <= 6) ? '한 학기는 1~6개월로 적어 주세요. 15일 이상이면 1개월로 셉니다.' : '';
+          const errEl = box.querySelector('[data-officer-error]');
+          errEl.textContent = err;
+          errEl.hidden = !err;
+          if (err) return;
           const role = box.querySelector('[data-officer-role]').value;
           Store.update((s) => {
             const officers = Object.assign({}, s.officers);
-            officers[sid] = (officers[sid] || []).concat([{ id: `o${Date.now().toString(36)}`, role, months }]);
+            officers[sid] = (officers[sid] || []).concat([{ id: `o${Date.now().toString(36)}`, sem, role, months }]);
             return { officers };
           });
         }
